@@ -22,8 +22,19 @@ public class UserController {
     private final UserService userService;
 
     //POST http://localhost:8080/api/users
+
     @PostMapping
-    @Operation(summary = "Создать пользователя", description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает true при успехе.")
+    @Operation(
+            summary = "Создать пользователя",
+            description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает true при успехе.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @io.swagger.v3.oas.annotations.media.Content(
+                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
+                                    value = "{\"name\": \"string\", \"email\": \"user@example.com\", \"age\": 0}"
+                            )
+                    )
+            )
+    )
     public boolean createUser(@Valid @RequestBody UserDTO userDTO) {
         return userService.createUser(userDTO);
     }
