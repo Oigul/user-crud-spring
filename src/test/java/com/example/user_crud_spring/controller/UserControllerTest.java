@@ -1,8 +1,10 @@
 package com.example.user_crud_spring.controller;
 
+import com.example.user_crud_spring.assembler.UserModelAssembler;
 import com.example.user_crud_spring.dtos.UserDTO;
 import com.example.user_crud_spring.service.UserService;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@Import(UserModelAssembler.class)
 public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;

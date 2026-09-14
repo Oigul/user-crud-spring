@@ -1,7 +1,5 @@
 package com.example.user_crud_spring.dtos;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.hateoas.RepresentationModel;
 
 import java.util.Objects;
 
@@ -19,8 +16,7 @@ import java.util.Objects;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true, value = {"links"})
-public class UserDTO extends RepresentationModel<UserDTO> {
+public class UserDTO {
     private Long id;
 
     @NotBlank(message = "Name must not be empty")
@@ -62,11 +58,5 @@ public class UserDTO extends RepresentationModel<UserDTO> {
         result = 31 * result + (email != null ? email.hashCode() : 0);
         result = 31 * result + (age != null ? age.hashCode() : 0);
         return result;
-    }
-
-    @Schema(hidden = true)
-    @Override
-    public org.springframework.hateoas.Links getLinks() {
-        return super.getLinks();
     }
 }

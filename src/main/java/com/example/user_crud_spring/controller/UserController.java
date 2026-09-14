@@ -1,5 +1,6 @@
 package com.example.user_crud_spring.controller;
 
+import com.example.user_crud_spring.assembler.UserModelAssembler;
 import com.example.user_crud_spring.dtos.UserDTO;
 import com.example.user_crud_spring.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,8 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.CollectionModel;
 
 @RestController
 @RequestMapping("/api/users")
@@ -20,6 +21,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class UserController {
 
     private final UserService userService;
+    private final UserModelAssembler assembler;
 
     //POST http://localhost:8080/api/users
 
@@ -42,29 +44,18 @@ public class UserController {
     //GET http://localhost:8080/api/users/5
     @GetMapping("/{id}")
     @Operation(summary = "Получить пользователя по его ID", description = "Возвращает DTO пользователя вместе с навигационными HATEOAS ссылками")
-    public UserDTO getUserById(@PathVariable Long id) {
+    public EntityModel<UserDTO> getUserById(@PathVariable Long id) {
         UserDTO userDTO = userService.getUserById(id);
-
-        if (userDTO != null) {
-            userDTO.add(linkTo(methodOn(UserController.class).getUserById(id)).withSelfRel());
-
-            userDTO.add(linkTo(methodOn(UserController.class).getAllUsers()).withRel("all-users"));
-        }
-
-        return userDTO;
+        return userDTO != null ? assembler.toModel(userDTO) : null;
     }
 
     //GET http://localhost:8080/api/users
     @GetMapping
     @Operation(summary = "Получить список всех пользователей", description = "Возвращает массив всех пользователей. Каждый элемент содержит персональную ссылку.")
-    public List<UserDTO> getAllUsers() {
+    public List<EntityModel<UserDTO>>  getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
 
-        for (UserDTO userDTO : users) {
-            userDTO.add(linkTo(methodOn(UserController.class).getUserById(userDTO.getId())).withSelfRel());
-        }
-
-        return users;
+        return assembler.toModelList(users);
     }
 
     //PUT http://localhost:8080/api/users
