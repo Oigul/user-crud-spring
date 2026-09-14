@@ -7,12 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.CollectionModel;
 
 @RestController
 @RequestMapping("/api/users")
@@ -26,9 +26,10 @@ public class UserController {
     //POST http://localhost:8080/api/users
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Создать пользователя",
-            description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает true при успехе.",
+            description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает созданного пользователя.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     content = @io.swagger.v3.oas.annotations.media.Content(
                             examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
@@ -37,7 +38,7 @@ public class UserController {
                     )
             )
     )
-    public boolean createUser(@Valid @RequestBody UserDTO userDTO) {
+    public UserDTO createUser(@Valid @RequestBody UserDTO userDTO) {
         return userService.createUser(userDTO);
     }
 
@@ -46,7 +47,7 @@ public class UserController {
     @Operation(summary = "Получить пользователя по его ID", description = "Возвращает DTO пользователя вместе с навигационными HATEOAS ссылками")
     public EntityModel<UserDTO> getUserById(@PathVariable Long id) {
         UserDTO userDTO = userService.getUserById(id);
-        return userDTO != null ? assembler.toModel(userDTO) : null;
+        return assembler.toModel(userDTO);
     }
 
     //GET http://localhost:8080/api/users
@@ -60,15 +61,16 @@ public class UserController {
 
     //PUT http://localhost:8080/api/users
     @PutMapping
-    @Operation(summary = "Обновить данные пользователя", description = "Обновляет имя, возраст или email существующего пользователя по его ID. Возвращает true при успехе.")
-    public boolean updateUser(@Valid @RequestBody UserDTO userDTO) {
+    @Operation(summary = "Обновить данные пользователя", description = "Обновляет имя, возраст или email существующего пользователя по его ID. Возвращает обновлённые данные пользователя.")
+    public UserDTO updateUser(@Valid @RequestBody UserDTO userDTO) {
         return userService.updateUser(userDTO);
     }
 
     //DELETE http://localhost:8080/api/users/5
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить пользователя", description = "Удаляет пользователя по ID и отправляет уведомление в Kafka. Возвращает true при успехе.")
-    public boolean deleteUser(@PathVariable Long id) {
-        return userService.deleteUser(id);
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Удалить пользователя", description = "Удаляет пользователя по ID и отправляет уведомление в Kafka.")
+    public void  deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
     }
 }

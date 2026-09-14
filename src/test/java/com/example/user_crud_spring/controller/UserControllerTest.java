@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
+import java.util.NoSuchElementException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -40,25 +41,28 @@ public class UserControllerTest {
     }
 
     @Test
-    void сreateUser_Successfully() throws Exception {
-        Mockito.when(userService.createUser(any(UserDTO.class))).thenReturn(true);
+    void createUser_Successfully() throws Exception {
+        Mockito.when(userService.createUser(any(UserDTO.class))).thenReturn(testUser);
 
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testUser)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Анна"))
+                .andExpect(jsonPath("$.email").value("anna@example.com"))
+                .andExpect(jsonPath("$.age").value(55));
     }
 
     @Test
     void createUser_NotSuccessfully() throws Exception {
-        Mockito.when(userService.createUser(any(UserDTO.class))).thenReturn(false);
+        Mockito.when(userService.createUser(any(UserDTO.class)))
+                .thenThrow(new IllegalStateException("Email already exists: " + testUser.getEmail()));
 
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testUser)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -103,11 +107,10 @@ public class UserControllerTest {
 
     @Test
     void getUserById_NotSuccessfully() throws Exception {
-        Mockito.when(userService.getUserById(99L)).thenReturn(null);
+        Mockito.when(userService.getUserById(99L)).thenThrow(new NoSuchElementException());
 
         mockMvc.perform(get("/api/users/99"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -133,24 +136,48 @@ public class UserControllerTest {
 
     @Test
     void updateUser_Successfully() throws Exception {
-        Mockito.when(userService.updateUser(any(UserDTO.class))).thenReturn(true);
+        Mockito.when(userService.updateUser(any(UserDTO.class))).thenReturn(testUser);
 
         mockMvc.perform(put("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testUser)))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Анна"))
+                .andExpect(jsonPath("$.email").value("anna@example.com"))
+                .andExpect(jsonPath("$.age").value(55));
     }
 
     @Test
-    void updateUser_NotSuccessfully() throws Exception {
-        Mockito.when(userService.updateUser(any(UserDTO.class))).thenReturn(false);
+    void updateUser_NotFound() throws Exception {
+        Mockito.when(userService.updateUser(any(UserDTO.class))).thenThrow(new NoSuchElementException());
 
         mockMvc.perform(put("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testUser)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateUser_NullId() throws Exception {
+        Mockito.when(userService.updateUser(any(UserDTO.class)))
+                .thenThrow(new IllegalArgumentException("User id must not be null"));
+
+        mockMvc.perform(put("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(testUser)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_EmailConflict() throws Exception {
+        Mockito.when(userService.updateUser(any(UserDTO.class)))
+                .thenThrow(new IllegalStateException("Email already exists: " + testUser.getEmail()));
+
+        mockMvc.perform(put("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(testUser)))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -182,19 +209,16 @@ public class UserControllerTest {
 
     @Test
     void deleteUser_Successfully() throws Exception {
-        Mockito.when(userService.deleteUser(1L)).thenReturn(true);
-
         mockMvc.perform(delete("/api/users/1"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(status().isNoContent());
     }
 
     @Test
     void deleteUser_NotSuccessfully() throws Exception {
-        Mockito.when(userService.deleteUser(1L)).thenReturn(false);
+        Mockito.doThrow(new NoSuchElementException())
+                .when(userService).deleteUser(99L);
 
-        mockMvc.perform(delete("/api/users/1"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("false"));
+        mockMvc.perform(delete("/api/users/99"))
+                .andExpect(status().isNotFound());
     }
 }

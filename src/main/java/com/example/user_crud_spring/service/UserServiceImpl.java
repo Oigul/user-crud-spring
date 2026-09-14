@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,10 +27,9 @@ public class UserServiceImpl implements UserService {
     private static final String TOPIC = "user-events";
 
     @Override
-    public boolean createUser(UserDTO userDTO) {
+    public UserDTO createUser(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {
-            log.warn("existing email address: {}", userDTO.getEmail());
-            return false;
+            throw new IllegalStateException("Email already exists: " + userDTO.getEmail());
         }
 
         User user = UserMapper.toEntity(userDTO);
@@ -37,12 +37,12 @@ public class UserServiceImpl implements UserService {
 
         sendEventToKafka(savedUser.getEmail(), "CREATE");
 
-        return true;
+        return UserMapper.toDTO(savedUser);
     }
 
     @Override
     public UserDTO getUserById(Long id) {
-        User user = userRepository.findById(id).orElse(null);
+        User user = userRepository.findById(id).orElseThrow(NoSuchElementException::new);
         return UserMapper.toDTO(user);
     }
 
@@ -54,20 +54,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean updateUser(UserDTO userDTO) {
+    public UserDTO updateUser(UserDTO userDTO) {
         if (userDTO.getId() == null) {
-            return false;
+            throw new IllegalArgumentException("User id must not be null");
         }
 
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
-            log.warn("existing email address: {}", userDTO.getEmail());
-            return false;
-        }
+        User user = userRepository.findById(userDTO.getId()).orElseThrow(NoSuchElementException::new);
 
-        User user = userRepository.findById(userDTO.getId()).orElse(null);
-
-        if (user == null) {
-            return false;
+        if (!user.getEmail().equals(userDTO.getEmail()) && userRepository.existsByEmail(userDTO.getEmail())) {
+            throw new IllegalStateException("Email already exists: " + userDTO.getEmail());
         }
 
         user.setName(userDTO.getName());
@@ -75,20 +70,16 @@ public class UserServiceImpl implements UserService {
         user.setAge(userDTO.getAge());
 
         userRepository.save(user);
-        return true;
+        return UserMapper.toDTO(user);
     }
 
     @Override
-    public boolean deleteUser(Long id) {
-        User user = userRepository.findById(id).orElse(null);
-        if (user == null) {
-            return false;
-        }
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id).orElseThrow(NoSuchElementException::new);
 
         userRepository.deleteById(id);
 
         sendEventToKafka(user.getEmail(), "DELETE");
-        return true;
     }
 
     private void sendEventToKafka(String email, String operation) {
