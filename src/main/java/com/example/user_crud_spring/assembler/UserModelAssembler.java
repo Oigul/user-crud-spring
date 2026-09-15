@@ -1,7 +1,8 @@
 package com.example.user_crud_spring.assembler;
 
 import com.example.user_crud_spring.controller.UserController;
-import com.example.user_crud_spring.dtos.UserDTO;
+import com.example.user_crud_spring.dtos.UserResponse;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
@@ -14,18 +15,20 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Component
 public class UserModelAssembler implements
-        RepresentationModelAssembler<UserDTO, EntityModel<UserDTO>> {
+        RepresentationModelAssembler<UserResponse, EntityModel<UserResponse>> {
 
     @Override
-    public EntityModel<UserDTO> toModel(UserDTO dto) {
-        return EntityModel.of(dto,
-                linkTo(methodOn(UserController.class).getUserById(dto.getId())).withSelfRel(),
+    public EntityModel<UserResponse> toModel(UserResponse response) {
+        return EntityModel.of(response,
+                linkTo(methodOn(UserController.class).getUserById(response.getId())).withSelfRel(),
                 linkTo(methodOn(UserController.class).getAllUsers()).withRel("all-users"));
     }
 
-    public List<EntityModel<UserDTO>> toModelList(List<UserDTO> dtos) {
-        return dtos.stream()
+    public CollectionModel<EntityModel<UserResponse>> toCollectionModel(List<UserResponse> responses) {
+        List<EntityModel<UserResponse>> models = responses.stream()
                 .map(this::toModel)
                 .collect(Collectors.toList());
+
+        return CollectionModel.of(models, linkTo(methodOn(UserController.class).getAllUsers()).withSelfRel());
     }
 }

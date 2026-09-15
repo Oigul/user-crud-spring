@@ -1,6 +1,8 @@
 package com.example.user_crud_spring.service;
 
-import com.example.user_crud_spring.dtos.UserDTO;
+import com.example.user_crud_spring.dtos.UserCreateRequest;
+import com.example.user_crud_spring.dtos.UserResponse;
+import com.example.user_crud_spring.dtos.UserUpdateRequest;
 import com.example.user_crud_spring.kafka.events.UserEvent;
 import com.example.user_crud_spring.mappers.UserMapper;
 import com.example.user_crud_spring.model.User;
@@ -29,50 +31,46 @@ public class UserServiceImpl implements UserService {
     private static final String TOPIC = "user-events";
 
     @Override
-    public UserDTO createUser(UserDTO userDTO) {
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
-            throw new IllegalStateException("Email already exists: " + userDTO.getEmail());
+    public UserResponse createUser(UserCreateRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalStateException("Email already exists: " + request.getEmail());
         }
 
-        User user = UserMapper.toEntity(userDTO);
+        User user = UserMapper.toEntity(request);
         User savedUser = userRepository.save(user);
 
         sendEventToKafka(savedUser.getEmail(), "CREATE");
 
-        return UserMapper.toDTO(savedUser);
+        return UserMapper.toResponse(savedUser);
     }
 
     @Override
-    public UserDTO getUserById(Long id) {
+    public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id).orElseThrow(NoSuchElementException::new);
-        return UserMapper.toDTO(user);
+        return UserMapper.toResponse(user);
     }
 
     @Override
-    public List<UserDTO> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(UserMapper::toDTO)
+                .map(UserMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public UserDTO updateUser(UserDTO userDTO) {
-        if (userDTO.getId() == null) {
-            throw new IllegalArgumentException("User id must not be null");
+    public UserResponse updateUser(Long id, UserUpdateRequest request) {
+        User user = userRepository.findById(id).orElseThrow(NoSuchElementException::new);
+
+        if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalStateException("Email already exists: " + request.getEmail());
         }
 
-        User user = userRepository.findById(userDTO.getId()).orElseThrow(NoSuchElementException::new);
-
-        if (!user.getEmail().equals(userDTO.getEmail()) && userRepository.existsByEmail(userDTO.getEmail())) {
-            throw new IllegalStateException("Email already exists: " + userDTO.getEmail());
-        }
-
-        user.setName(userDTO.getName());
-        user.setEmail(userDTO.getEmail());
-        user.setAge(userDTO.getAge());
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setAge(request.getAge());
 
         userRepository.save(user);
-        return UserMapper.toDTO(user);
+        return UserMapper.toResponse(user);
     }
 
     @Override

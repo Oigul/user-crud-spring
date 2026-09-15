@@ -1,12 +1,15 @@
 package com.example.user_crud_spring.controller;
 
 import com.example.user_crud_spring.assembler.UserModelAssembler;
-import com.example.user_crud_spring.dtos.UserDTO;
+import com.example.user_crud_spring.dtos.UserCreateRequest;
+import com.example.user_crud_spring.dtos.UserResponse;
+import com.example.user_crud_spring.dtos.UserUpdateRequest;
 import com.example.user_crud_spring.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,50 +26,33 @@ public class UserController {
     private final UserService userService;
     private final UserModelAssembler assembler;
 
-    //POST http://localhost:8080/api/users
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(
-            summary = "Создать пользователя",
-            description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает созданного пользователя.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    content = @io.swagger.v3.oas.annotations.media.Content(
-                            examples = @io.swagger.v3.oas.annotations.media.ExampleObject(
-                                    value = "{\"name\": \"string\", \"email\": \"user@example.com\", \"age\": 0}"
-                            )
-                    )
-            )
-    )
-    public UserDTO createUser(@Valid @RequestBody UserDTO userDTO) {
-        return userService.createUser(userDTO);
+    @Operation(summary = "Создать пользователя", description = "Проверяет уникальность email, валидирует DTO и отправляет уведомление в Kafka. Возвращает созданного пользователя.")
+    public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
+        return userService.createUser(request);
     }
 
-    //GET http://localhost:8080/api/users/5
     @GetMapping("/{id}")
-    @Operation(summary = "Получить пользователя по его ID", description = "Возвращает DTO пользователя вместе с навигационными HATEOAS ссылками")
-    public EntityModel<UserDTO> getUserById(@PathVariable Long id) {
-        UserDTO userDTO = userService.getUserById(id);
-        return assembler.toModel(userDTO);
+    @Operation(summary = "Получить пользователя по его ID", description = "Возвращает пользователя вместе с навигационными HATEOAS ссылками")
+    public EntityModel<UserResponse> getUserById(@PathVariable Long id) {
+        UserResponse response = userService.getUserById(id);
+        return assembler.toModel(response);
     }
 
-    //GET http://localhost:8080/api/users
     @GetMapping
     @Operation(summary = "Получить список всех пользователей", description = "Возвращает массив всех пользователей. Каждый элемент содержит персональную ссылку.")
-    public List<EntityModel<UserDTO>>  getAllUsers() {
-        List<UserDTO> users = userService.getAllUsers();
-
-        return assembler.toModelList(users);
+    public CollectionModel<EntityModel<UserResponse>> getAllUsers() {
+        List<UserResponse> users = userService.getAllUsers();
+        return assembler.toCollectionModel(users);
     }
 
-    //PUT http://localhost:8080/api/users
-    @PutMapping
+    @PutMapping("/{id}")
     @Operation(summary = "Обновить данные пользователя", description = "Обновляет имя, возраст или email существующего пользователя по его ID. Возвращает обновлённые данные пользователя.")
-    public UserDTO updateUser(@Valid @RequestBody UserDTO userDTO) {
-        return userService.updateUser(userDTO);
+    public UserResponse  updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
+        return userService.updateUser(id, request);
     }
 
-    //DELETE http://localhost:8080/api/users/5
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Удалить пользователя", description = "Удаляет пользователя по ID и отправляет уведомление в Kafka.")
